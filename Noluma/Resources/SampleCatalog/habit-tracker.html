@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Habit Streaks</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f2f2f7; --card:#fff; --text:#111; --muted:#8e8e93; --accent:#ff9500; --line:#e5e5ea; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#000; --card:#1c1c1e; --text:#fff; --line:#2c2c2e; } }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; background:var(--bg); color:var(--text); font:17px -apple-system,system-ui,sans-serif;
+         padding:20px 16px calc(24px + env(safe-area-inset-bottom)); }
+  h1 { font-size:30px; margin:4px 0 16px; }
+  form { display:flex; gap:8px; margin-bottom:16px; }
+  input { flex:1; min-width:0; font:inherit; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:inherit; }
+  button { font:inherit; border:0; border-radius:12px; min-height:44px; padding:0 16px; background:var(--accent); color:#fff; font-weight:600; }
+  .habit { background:var(--card); border-radius:16px; padding:14px; margin-bottom:12px; }
+  .top { display:flex; align-items:center; gap:10px; }
+  .name { flex:1; font-weight:600; }
+  .streak { color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
+  .remove { background:none; color:var(--muted); padding:0 6px; min-height:32px; font-size:20px; }
+  .days { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:12px; }
+  .day { background:none; padding:0; min-height:0; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--muted); font-size:12px; font-weight:500; }
+  .dot { width:34px; height:34px; border-radius:50%; border:2px solid var(--line); display:grid; place-items:center; color:#fff; font-size:16px; }
+  .day.done .dot { background:var(--accent); border-color:var(--accent); }
+  .day.today { color:var(--text); }
+  .empty { text-align:center; color:var(--muted); padding:48px 16px; }
+</style>
+</head>
+<body>
+<h1>Habits</h1>
+<form id="add"><input id="name" placeholder="New habit" maxlength="40" autocomplete="off"><button>Add</button></form>
+<div id="list"></div>
+<script>
+  const KEY = 'habits-v1';
+  let habits = JSON.parse(localStorage.getItem(KEY) || '[]');
+  const save = () => localStorage.setItem(KEY, JSON.stringify(habits));
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const daysBack = n => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
+  function streak(h) {
+    let n = 0, i = h.done.includes(iso(new Date())) ? 0 : 1;
+    while (h.done.includes(iso(daysBack(i)))) { n++; i++; }
+    return n;
+  }
+  function render() {
+    const list = document.getElementById('list');
+    list.innerHTML = '';
+    if (!habits.length) { list.innerHTML = '<div class="empty">Add your first habit above, then tap a day to mark it done.</div>'; return; }
+    habits.forEach((h, index) => {
+      const card = document.createElement('div'); card.className = 'habit';
+      const top = document.createElement('div'); top.className = 'top';
+      const name = document.createElement('div'); name.className = 'name'; name.textContent = h.name;
+      const s = document.createElement('div'); s.className = 'streak'; s.textContent = '🔥 ' + streak(h);
+      const rm = document.createElement('button'); rm.className = 'remove'; rm.textContent = '×'; rm.setAttribute('aria-label', 'Remove ' + h.name);
+      rm.onclick = () => { if (confirm('Remove "' + h.name + '"?')) { habits.splice(index, 1); save(); render(); } };
+      top.append(name, s, rm);
+      const days = document.createElement('div'); days.className = 'days';
+      for (let i = 6; i >= 0; i--) {
+        const d = daysBack(i), key = iso(d), done = h.done.includes(key);
+        const b = document.createElement('button');
+        b.className = 'day' + (done ? ' done' : '') + (i === 0 ? ' today' : '');
+        b.innerHTML = '<span class="dot">' + (done ? '✓' : '') + '</span>' + d.toLocaleDateString(undefined, { weekday: 'narrow' });
+        b.onclick = () => { h.done = done ? h.done.filter(x => x !== key) : h.done.concat(key); save(); render(); };
+        days.append(b);
+      }
+      card.append(top, days); list.append(card);
+    });
+  }
+  document.getElementById('add').onsubmit = e => {
+    e.preventDefault();
+    const input = document.getElementById('name'), name = input.value.trim();
+    if (!name) return;
+    habits.push({ name, done: [] }); input.value = ''; save(); render();
+  };
+  render();
+</script>
+</body>
+</html>

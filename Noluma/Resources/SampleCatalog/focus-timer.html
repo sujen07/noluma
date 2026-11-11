@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Focus Timer</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f2f2f7; --text:#111; --muted:#8e8e93; --accent:#ff3b30; --track:#e5e5ea; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#000; --text:#fff; --track:#2c2c2e; } }
+  body.break { --accent:#34c759; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:17px -apple-system,system-ui,sans-serif;
+         display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px;
+         padding:24px 16px calc(24px + env(safe-area-inset-bottom)); }
+  .mode { font-size:15px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
+  .ring { position:relative; width:270px; height:270px; }
+  svg { transform:rotate(-90deg); }
+  circle { fill:none; stroke-width:14; }
+  .track { stroke:var(--track); }
+  .bar { stroke:var(--accent); stroke-linecap:round; transition:stroke-dashoffset .3s linear; }
+  .time { position:absolute; inset:0; display:grid; place-items:center; font-size:64px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .buttons { display:flex; gap:12px; }
+  button { font:inherit; font-weight:600; min-height:52px; min-width:120px; border:0; border-radius:26px; background:var(--accent); color:#fff; }
+  button.ghost { background:var(--track); color:var(--text); }
+  .count { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="mode" id="mode">Focus</div>
+<div class="ring">
+  <svg width="270" height="270"><circle class="track" cx="135" cy="135" r="120"/><circle class="bar" id="bar" cx="135" cy="135" r="120"/></svg>
+  <div class="time" id="time">25:00</div>
+</div>
+<div class="buttons"><button id="toggle">Start</button><button class="ghost" id="reset">Reset</button></div>
+<div class="count" id="count"></div>
+<script>
+  const FOCUS = 25 * 60, BREAK = 5 * 60, C = 2 * Math.PI * 120;
+  const today = new Date().toDateString();
+  let stats = JSON.parse(localStorage.getItem('focus-stats') || '{}');
+  if (stats.day !== today) stats = { day: today, done: 0 };
+  let onBreak = false, total = FOCUS, left = FOCUS, endsAt = null, tick = null;
+  const $ = id => document.getElementById(id);
+  $('bar').style.strokeDasharray = C;
+  function draw() {
+    $('time').textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
+    $('bar').style.strokeDashoffset = C * (1 - left / total);
+    $('mode').textContent = onBreak ? 'Break' : 'Focus';
+    document.body.classList.toggle('break', onBreak);
+    $('toggle').textContent = tick ? 'Pause' : 'Start';
+    $('count').textContent = stats.done + (stats.done === 1 ? ' session' : ' sessions') + ' finished today';
+  }
+  function stop() { clearInterval(tick); tick = null; }
+  function finish() {
+    stop();
+    if (!onBreak) { stats.done++; localStorage.setItem('focus-stats', JSON.stringify(stats)); }
+    onBreak = !onBreak; total = left = onBreak ? BREAK : FOCUS; draw();
+  }
+  $('toggle').onclick = () => {
+    if (tick) { stop(); draw(); return; }
+    endsAt = Date.now() + left * 1000;
+    tick = setInterval(() => { left = Math.max(0, Math.round((endsAt - Date.now()) / 1000)); if (left === 0) finish(); else draw(); }, 250);
+    draw();
+  };
+  $('reset').onclick = () => { stop(); left = total; draw(); };
+  draw();
+</script>
+</body>
+</html>

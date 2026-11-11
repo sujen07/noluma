@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Split It</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f2f2f7; --card:#fff; --text:#111; --muted:#8e8e93; --accent:#34c759; --line:#e5e5ea; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#000; --card:#1c1c1e; --text:#fff; --line:#2c2c2e; } }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; background:var(--bg); color:var(--text); font:17px -apple-system,system-ui,sans-serif;
+         padding:20px 16px calc(24px + env(safe-area-inset-bottom)); }
+  h1 { font-size:30px; margin:4px 0 16px; }
+  .card { background:var(--card); border-radius:16px; padding:16px; margin-bottom:12px; }
+  label { display:block; color:var(--muted); font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px; }
+  input { width:100%; font:600 34px -apple-system,system-ui; border:0; background:none; color:inherit; outline:none; padding:0; }
+  .row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  button { font:inherit; font-weight:600; min-height:44px; border-radius:12px; border:0; background:var(--bg); color:inherit; }
+  button.on { background:var(--accent); color:#fff; }
+  .stepper { display:flex; align-items:center; gap:16px; }
+  .stepper button { width:52px; font-size:24px; }
+  .stepper span { flex:1; text-align:center; font-size:28px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .result { background:var(--accent); color:#fff; }
+  .result label { color:rgba(255,255,255,.8); }
+  .big { font-size:44px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .lines { display:flex; justify-content:space-between; margin-top:10px; font-size:15px; opacity:.9; }
+</style>
+</head>
+<body>
+<h1>Split It</h1>
+<div class="card"><label for="bill">Bill</label><input id="bill" type="text" inputmode="decimal" placeholder="0.00"></div>
+<div class="card"><label>Tip</label><div class="row" id="tips"></div></div>
+<div class="card"><label>People</label>
+  <div class="stepper"><button id="minus" aria-label="Fewer people">−</button><span id="people">2</span><button id="plus" aria-label="More people">+</button></div>
+</div>
+<div class="card result"><label>Each person pays</label><div class="big" id="each">0.00</div>
+  <div class="lines"><span id="tipLine">Tip 0.00</span><span id="totalLine">Total 0.00</span></div>
+</div>
+<script>
+  const prefs = JSON.parse(localStorage.getItem('split-prefs') || '{"tip":18,"people":2}');
+  const bill = document.getElementById('bill');
+  const tips = document.getElementById('tips');
+  const fmt = n => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  [10, 15, 18, 20].forEach(p => {
+    const b = document.createElement('button'); b.textContent = p + '%'; b.dataset.p = p;
+    b.onclick = () => { prefs.tip = p; update(); };
+    tips.append(b);
+  });
+  function update() {
+    localStorage.setItem('split-prefs', JSON.stringify(prefs));
+    [...tips.children].forEach(b => b.classList.toggle('on', Number(b.dataset.p) === prefs.tip));
+    document.getElementById('people').textContent = prefs.people;
+    const amount = parseFloat(bill.value.replace(',', '.')) || 0;
+    const tip = amount * prefs.tip / 100, total = amount + tip;
+    document.getElementById('each').textContent = fmt(total / prefs.people);
+    document.getElementById('tipLine').textContent = 'Tip ' + fmt(tip);
+    document.getElementById('totalLine').textContent = 'Total ' + fmt(total);
+  }
+  bill.oninput = update;
+  document.getElementById('minus').onclick = () => { prefs.people = Math.max(1, prefs.people - 1); update(); };
+  document.getElementById('plus').onclick = () => { prefs.people = Math.min(50, prefs.people + 1); update(); };
+  update();
+</script>
+</body>
+</html>

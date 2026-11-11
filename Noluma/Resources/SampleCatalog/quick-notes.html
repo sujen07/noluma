@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pocket Notes</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f2f2f7; --card:#fff; --text:#111; --muted:#8e8e93; --accent:#e0a800; --line:#e5e5ea; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#000; --card:#1c1c1e; --text:#fff; --line:#2c2c2e; --accent:#ffd60a; } }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--text); font:17px -apple-system,system-ui,sans-serif; }
+  .screen { padding:20px 16px calc(24px + env(safe-area-inset-bottom)); min-height:100%; }
+  header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  h1 { font-size:30px; margin:4px 0; }
+  button { font:inherit; font-weight:600; border:0; background:none; color:var(--accent); min-height:44px; padding:0 4px; }
+  .new { background:var(--accent); color:#000; border-radius:22px; padding:0 18px; }
+  .note { background:var(--card); border-radius:14px; padding:14px; margin-bottom:10px; }
+  .note b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .note span { color:var(--muted); font-size:14px; }
+  .empty { text-align:center; color:var(--muted); padding:64px 16px; }
+  #editor { display:none; flex-direction:column; height:100%; background:var(--card); }
+  #editor header { padding:8px 16px 0; margin:0; }
+  textarea { flex:1; width:100%; border:0; outline:none; resize:none; background:none; color:inherit; font:inherit; line-height:1.45;
+             padding:8px 16px calc(16px + env(safe-area-inset-bottom)); }
+  .danger { color:#ff3b30; }
+</style>
+</head>
+<body>
+<div class="screen" id="home">
+  <header><h1>Notes</h1><button class="new" id="new">New</button></header>
+  <div id="list"></div>
+</div>
+<div id="editor">
+  <header><button id="back">‹ Notes</button><button class="danger" id="del">Delete</button></header>
+  <textarea id="text" placeholder="Start typing…"></textarea>
+</div>
+<script>
+  const KEY = 'notes-v1';
+  let notes = JSON.parse(localStorage.getItem(KEY) || '[]');
+  let current = null;
+  const $ = id => document.getElementById(id);
+  const save = () => localStorage.setItem(KEY, JSON.stringify(notes));
+  function render() {
+    const list = $('list'); list.innerHTML = '';
+    if (!notes.length) { list.innerHTML = '<div class="empty">No notes yet. Tap New to write one.</div>'; return; }
+    notes.sort((a, b) => b.t - a.t).forEach(n => {
+      const el = document.createElement('div'); el.className = 'note';
+      const lines = n.text.trim().split('\n');
+      const title = document.createElement('b'); title.textContent = lines[0] || 'Empty note';
+      const meta = document.createElement('span');
+      meta.textContent = new Date(n.t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + (lines[1] ? ' · ' + lines[1].slice(0, 40) : '');
+      el.append(title, meta); el.onclick = () => open(n.id); list.append(el);
+    });
+  }
+  function open(id) {
+    current = notes.find(n => n.id === id);
+    $('text').value = current.text; $('home').style.display = 'none'; $('editor').style.display = 'flex';
+    if (!current.text) $('text').focus();
+  }
+  function close() {
+    if (current && !current.text.trim()) notes = notes.filter(n => n !== current);
+    current = null; save(); $('editor').style.display = 'none'; $('home').style.display = 'block'; render();
+  }
+  $('new').onclick = () => { const n = { id: Date.now().toString(36), text: '', t: Date.now() }; notes.push(n); open(n.id); };
+  $('text').oninput = e => { current.text = e.target.value; current.t = Date.now(); save(); };
+  $('back').onclick = close;
+  $('del').onclick = () => { if (confirm('Delete this note?')) { notes = notes.filter(n => n !== current); current = null; close(); } };
+  render();
+</script>
+</body>
+</html>

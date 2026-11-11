@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spend Log</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f2f2f7; --card:#fff; --text:#111; --muted:#8e8e93; --accent:#30b0c7; --line:#e5e5ea; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#000; --card:#1c1c1e; --text:#fff; --line:#2c2c2e; } }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; background:var(--bg); color:var(--text); font:17px -apple-system,system-ui,sans-serif;
+         padding:20px 16px calc(24px + env(safe-area-inset-bottom)); }
+  .label { color:var(--muted); font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+  .total { font-size:46px; font-weight:700; font-variant-numeric:tabular-nums; margin:2px 0 16px; }
+  .card { background:var(--card); border-radius:16px; padding:14px; margin-bottom:12px; }
+  form { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  input, select, button { font:inherit; min-height:44px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:inherit; padding:0 12px; min-width:0; }
+  #what { grid-column:1 / -1; }
+  form button { grid-column:1 / -1; border:0; background:var(--accent); color:#fff; font-weight:600; }
+  .bar { display:grid; grid-template-columns:90px 1fr auto; gap:10px; align-items:center; padding:6px 0; font-size:15px; }
+  .track { height:8px; border-radius:4px; background:var(--line); overflow:hidden; }
+  .fill { height:100%; background:var(--accent); border-radius:4px; }
+  .item { display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line); }
+  .item:first-child { border-top:0; }
+  .item div { flex:1; min-width:0; }
+  .item small { display:block; color:var(--muted); }
+  .item b { font-variant-numeric:tabular-nums; }
+  .x { border:0; background:none; color:var(--muted); font-size:20px; padding:0 4px; }
+  .empty { color:var(--muted); text-align:center; padding:20px 0; }
+</style>
+</head>
+<body>
+<div class="label" id="month"></div>
+<div class="total" id="total">0.00</div>
+<div class="card">
+  <form id="add">
+    <input id="what" placeholder="What was it?" maxlength="40" autocomplete="off">
+    <input id="amount" type="text" inputmode="decimal" placeholder="Amount">
+    <select id="cat"><option>Food</option><option>Transport</option><option>Home</option><option>Fun</option><option>Other</option></select>
+    <button>Add expense</button>
+  </form>
+</div>
+<div class="card" id="cats"></div>
+<div class="card" id="list"></div>
+<script>
+  const KEY = 'spend-v1';
+  let items = JSON.parse(localStorage.getItem(KEY) || '[]');
+  const $ = id => document.getElementById(id);
+  const fmt = n => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const now = new Date(), monthKey = now.getFullYear() + '-' + now.getMonth();
+  $('month').textContent = now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  function render() {
+    const mine = items.filter(i => { const d = new Date(i.t); return d.getFullYear() + '-' + d.getMonth() === monthKey; });
+    const total = mine.reduce((s, i) => s + i.amount, 0);
+    $('total').textContent = fmt(total);
+    const cats = {}; mine.forEach(i => cats[i.cat] = (cats[i.cat] || 0) + i.amount);
+    const c = $('cats'); c.innerHTML = '';
+    Object.entries(cats).sort((a, b) => b[1] - a[1]).forEach(([name, sum]) => {
+      const row = document.createElement('div'); row.className = 'bar';
+      const n = document.createElement('span'); n.textContent = name;
+      const track = document.createElement('div'); track.className = 'track';
+      const fill = document.createElement('div'); fill.className = 'fill'; fill.style.width = (sum / total * 100) + '%'; track.append(fill);
+      const v = document.createElement('b'); v.textContent = fmt(sum);
+      row.append(n, track, v); c.append(row);
+    });
+    c.style.display = mine.length ? 'block' : 'none';
+    const list = $('list'); list.innerHTML = '';
+    if (!mine.length) { list.innerHTML = '<div class="empty">Nothing logged this month yet.</div>'; return; }
+    mine.sort((a, b) => b.t - a.t).forEach(i => {
+      const row = document.createElement('div'); row.className = 'item';
+      const info = document.createElement('div'); info.textContent = i.what;
+      const meta = document.createElement('small'); meta.textContent = i.cat + ' · ' + new Date(i.t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); info.append(meta);
+      const amount = document.createElement('b'); amount.textContent = fmt(i.amount);
+      const x = document.createElement('button'); x.className = 'x'; x.textContent = '×'; x.setAttribute('aria-label', 'Remove');
+      x.onclick = () => { items = items.filter(o => o !== i); save(); };
+      row.append(info, amount, x); list.append(row);
+    });
+  }
+  function save() { localStorage.setItem(KEY, JSON.stringify(items)); render(); }
+  $('add').onsubmit = e => {
+    e.preventDefault();
+    const amount = parseFloat($('amount').value.replace(',', '.'));
+    if (!amount || amount <= 0) { $('amount').focus(); return; }
+    items.push({ what: $('what').value.trim() || $('cat').value, amount, cat: $('cat').value, t: Date.now() });
+    $('what').value = ''; $('amount').value = ''; save();
+  };
+  render();
+</script>
+</body>
+</html>

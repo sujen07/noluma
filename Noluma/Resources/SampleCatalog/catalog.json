@@ -1,0 +1,75 @@
+[
+  {
+    "id": "sample-habit-tracker",
+    "name": "Habit Streaks",
+    "summary": "Track daily habits with a tap and watch your streaks grow over the week.",
+    "icon": "flame.fill",
+    "tint": "orange",
+    "author": "Maya R.",
+    "category": "Health",
+    "downloads": 1284,
+    "htmlFile": "habit-tracker",
+    "version": 3,
+    "prompts": [
+      "Make a habit tracker where I can add habits and tick them off each day.",
+      "Show the last 7 days for each habit as a row of dots and show the current streak.",
+      "Let me delete a habit by pressing a small remove button, and ask before deleting."
+    ]
+  },
+  {
+    "id": "sample-tip-splitter",
+    "name": "Split It",
+    "summary": "Work out the tip and what each person owes, with quick percentage buttons.",
+    "icon": "dollarsign.circle.fill",
+    "tint": "green",
+    "author": "Jonas K.",
+    "category": "Utilities",
+    "downloads": 932,
+    "htmlFile": "tip-splitter",
+    "version": 2,
+    "prompts": [
+      "A tip calculator: I type the bill, pick a tip percentage and the number of people, and it shows the total and the amount per person.",
+      "Remember my last tip percentage and number of people."
+    ]
+  },
+  {
+    "id": "sample-quick-notes",
+    "name": "Pocket Notes",
+    "summary": "A fast, private notepad. Notes save as you type and never leave your phone.",
+    "icon": "note.text",
+    "tint": "yellow",
+    "author": "Priya S.",
+    "category": "Productivity",
+    "downloads": 2107,
+    "htmlFile": "quick-notes",
+    "version": 4
+  },
+  {
+    "id": "sample-focus-timer",
+    "name": "Focus Timer",
+    "summary": "25-minute focus sessions with short breaks and a count of sessions finished today.",
+    "icon": "timer",
+    "tint": "red",
+    "author": "Tomás A.",
+    "category": "Productivity",
+    "downloads": 1576,
+    "htmlFile": "focus-timer",
+    "version": 2,
+    "prompts": [
+      "Build a pomodoro timer with a big circular countdown: 25 minutes of focus, then a 5 minute break.",
+      "Count how many focus sessions I finished today and reset the count each day."
+    ]
+  },
+  {
+    "id": "sample-budget",
+    "name": "Spend Log",
+    "summary": "Log what you spend by category and see this month's total at a glance.",
+    "icon": "chart.pie.fill",
+    "tint": "teal",
+    "author": "Lena W.",
+    "category": "Finance",
+    "downloads": 688,
+    "htmlFile": "spend-log",
+    "version": 1
+  }
+]
