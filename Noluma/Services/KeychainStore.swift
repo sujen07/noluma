@@ -3,7 +3,7 @@ import Security
 
 /// Stores the user's Claude API key in the device Keychain.
 enum KeychainStore {
-    private static let service = "app.noluma.Noluma"
+    private static let service = "com.sujen.noluma"
     private static let account = "claude-api-key"
 
     private static var baseQuery: [String: Any] {
