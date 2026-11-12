@@ -23,21 +23,24 @@ struct ChatView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemGroupedBackground))
             .safeAreaInset(edge: .bottom, spacing: 0) { composer }
-            .navigationTitle(chat.title)
+            .navigationTitle(chat.currentApp?.name ?? "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("History", systemImage: "clock.arrow.circlepath") { showHistory = true }
+                    Button("Chats", systemImage: "line.3.horizontal") { showHistory = true }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button("Settings", systemImage: "gearshape") { router.showSettings = true }
                     Button("New app", systemImage: "square.and.pencil") {
                         chat.startNewConversation()
                         draft = ""
                     }
-                    Button("Settings", systemImage: "gearshape") { router.showSettings = true }
                 }
             }
-            .sheet(isPresented: $showHistory) { ConversationListView() }
+            .sheet(isPresented: $showHistory) {
+                ConversationListView()
+                    .presentationDetents([.medium, .large])
+            }
         }
     }
 
@@ -46,7 +49,7 @@ struct ChatView: View {
     private var transcript: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 14) {
+                LazyVStack(alignment: .leading, spacing: 18) {
                     ForEach(chat.items) { item in
                         row(for: item)
                     }
@@ -63,7 +66,8 @@ struct ChatView: View {
                     }
                     Color.clear.frame(height: 1).id(bottomID)
                 }
-                .padding(16)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: chat.items.count) { scrollToBottom(proxy) }
@@ -79,17 +83,18 @@ struct ChatView: View {
         switch item {
         case .user(_, let text):
             Text(text)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .background(Color.accentColor.gradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.leading, 48)
+                .padding(.leading, 56)
         case .assistant(_, let text):
             Text(markdown(text))
+                .lineSpacing(3)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.trailing, 24)
+                .padding(.trailing, 20)
         case .app(_, let name, let version):
             AppCardView(name: name, version: version)
         }
@@ -99,150 +104,209 @@ struct ChatView: View {
     private var liveRow: some View {
         if !chat.liveText.isEmpty {
             Text(markdown(chat.liveText))
+                .lineSpacing(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.trailing, 24)
+                .padding(.trailing, 20)
         }
-        HStack(spacing: 10) {
-            ProgressView()
-            if chat.isBuilding {
-                Text(chat.buildProgress > 0 ? "Writing your app… \(chat.buildProgress.formatted()) characters" : "Writing your app…")
-                    .monospacedDigit()
-            } else if chat.liveText.isEmpty {
-                Text("Thinking…")
+        if chat.isBuilding {
+            HStack(spacing: 14) {
+                Image(systemName: "sparkles")
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+                    .symbolEffect(.pulse, options: .repeating)
+                    .frame(width: 52, height: 52)
+                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Building your app")
+                        .font(.headline)
+                    Text(chat.buildProgress > 0 ? "\(chat.buildProgress.formatted()) characters written" : "Getting started…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                }
+                Spacer(minLength: 0)
             }
+            .padding(14)
+            .card()
+        } else if chat.liveText.isEmpty {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .symbolEffect(.pulse, options: .repeating)
+                Text("Thinking")
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.secondary)
         }
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
     }
 
     private func errorRow(_ message: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(message, systemImage: "exclamationmark.triangle.fill")
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-                .symbolRenderingMode(.multicolor)
-            HStack {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(.orange)
+                Text(message)
+                    .font(.subheadline)
+            }
+            HStack(spacing: 10) {
                 if !settings.canChat {
                     Button("Open Settings") { router.showSettings = true }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(PillButtonStyle(prominent: true))
                 }
                 if chat.canRetry && settings.canChat {
                     Button("Try again") { chat.retry() }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(PillButtonStyle())
                 }
             }
-            .controlSize(.small)
         }
-        .padding(12)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .card(radius: 20)
     }
 
     // MARK: - Empty state
 
     private var emptyState: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                Image(systemName: "sparkles.rectangle.stack.fill")
-                    .font(.system(size: 52))
-                    .foregroundStyle(.tint)
-                    .padding(.top, 48)
-                VStack(spacing: 6) {
-                    Text("What do you want to build?")
-                        .font(.title2.weight(.bold))
-                    Text("Describe a small app and it's built for you. Apps run offline and keep their data on this iPhone.")
-                        .font(.subheadline)
+            VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("What should\nwe build?")
+                        .font(.system(size: 40, weight: .bold))
+                        .lineSpacing(-2)
+                    Text("Describe an app in your own words. It's built in seconds and runs privately on this iPhone.")
+                        .font(.body)
                         .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
                 }
-                VStack(spacing: 10) {
-                    ForEach(Self.suggestions, id: \.title) { suggestion in
-                        Button {
-                            draft = suggestion.prompt
-                            composerFocused = true
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: suggestion.icon)
-                                    .frame(width: 28)
-                                    .foregroundStyle(.tint)
-                                Text(suggestion.title)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                Image(systemName: "arrow.up.left")
-                                    .font(.footnote)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .padding(14)
-                            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                .padding(.top, 24)
+
                 if !settings.canChat {
                     Button {
                         router.showSettings = true
                     } label: {
-                        Label("Add your Claude API key to get started", systemImage: "key.fill")
-                            .font(.subheadline.weight(.medium))
+                        HStack(spacing: 12) {
+                            Image(systemName: "key.fill")
+                                .foregroundStyle(.white)
+                                .frame(width: 36, height: 36)
+                                .background(Color.accentColor.gradient, in: Circle())
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Add your Claude API key")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Needed once, stored on this iPhone")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(14)
+                        .card(radius: 20)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .padding(.top, 4)
+                    .buttonStyle(.plain)
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Try one of these")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                        ForEach(Self.suggestions, id: \.title) { suggestion in
+                            Button {
+                                draft = suggestion.prompt
+                                composerFocused = true
+                            } label: {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    AppIconView(icon: suggestion.icon, tint: suggestion.tint, size: 44)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(suggestion.title)
+                                            .font(.headline)
+                                        Text(suggestion.detail)
+                                            .font(.footnote)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(2, reservesSpace: true)
+                                            .multilineTextAlignment(.leading)
+                                    }
+                                }
+                                .padding(16)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .card()
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.interactively)
     }
 
     private struct Suggestion {
         let title: String
+        let detail: String
         let icon: String
+        let tint: String
         let prompt: String
     }
 
     private static let suggestions = [
-        Suggestion(title: "Workout log", icon: "dumbbell.fill",
+        Suggestion(title: "Workout log", detail: "Sets, reps and weight by day", icon: "dumbbell.fill", tint: "orange",
                    prompt: "A workout log where I add exercises with sets, reps and weight, and can see my history by day."),
-        Suggestion(title: "Reading list", icon: "books.vertical.fill",
+        Suggestion(title: "Reading list", detail: "Track books with ratings and notes", icon: "books.vertical.fill", tint: "purple",
                    prompt: "A reading list with books I want to read, am reading and have finished, with a rating and notes for each."),
-        Suggestion(title: "Water tracker", icon: "drop.fill",
+        Suggestion(title: "Water tracker", detail: "Daily goal and a 7-day chart", icon: "drop.fill", tint: "blue",
                    prompt: "A water tracker with a daily goal, quick buttons to add a glass, and a chart of the last 7 days."),
-        Suggestion(title: "Packing checklist", icon: "suitcase.fill",
+        Suggestion(title: "Packing list", detail: "Reusable checklist for trips", icon: "suitcase.fill", tint: "green",
                    prompt: "A packing checklist I can reuse for trips, grouped by category, with a button to uncheck everything."),
     ]
 
     // MARK: - Composer
 
     private var composer: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            TextField(chat.currentApp == nil ? "Describe an app…" : "Ask for a change…", text: $draft, axis: .vertical)
+        HStack(alignment: .bottom, spacing: 8) {
+            TextField(chat.currentApp == nil ? "Describe an app" : "Ask for a change", text: $draft, axis: .vertical)
                 .lineLimit(1...6)
                 .focused($composerFocused)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            if chat.isRunning {
-                Button {
-                    chat.stop()
-                } label: {
-                    Image(systemName: "stop.circle.fill").font(.system(size: 34))
+                .padding(.leading, 18)
+                .padding(.vertical, 13)
+            Group {
+                if chat.isRunning {
+                    Button {
+                        chat.stop()
+                    } label: {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 34, height: 34)
+                            .background(Color.primary.opacity(0.8), in: Circle())
+                    }
+                    .accessibilityLabel("Stop")
+                } else {
+                    let empty = draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    Button {
+                        let text = draft
+                        draft = ""
+                        chat.send(text)
+                    } label: {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 34, height: 34)
+                            .background(empty ? AnyShapeStyle(Color(.systemGray3)) : AnyShapeStyle(Color.accentColor.gradient), in: Circle())
+                    }
+                    .disabled(empty)
+                    .accessibilityLabel("Send")
                 }
-                .accessibilityLabel("Stop")
-            } else {
-                Button {
-                    let text = draft
-                    draft = ""
-                    chat.send(text)
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill").font(.system(size: 34))
-                }
-                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityLabel("Send")
             }
+            .buttonStyle(.plain)
+            .padding(.trailing, 7)
+            .padding(.bottom, 7)
         }
-        .padding(.horizontal, 12)
+        .glass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(.bar)
     }
 
     // MARK: - Helpers
@@ -271,26 +335,27 @@ struct AppCardView: View {
 
     var body: some View {
         let app = chat.currentApp
-        HStack(spacing: 12) {
-            AppIconView(icon: app?.icon ?? "app.fill", tint: app?.tint ?? "indigo", size: 48)
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 14) {
+            AppIconView(icon: app?.icon ?? "app.fill", tint: app?.tint ?? "indigo", size: 56)
+            VStack(alignment: .leading, spacing: 3) {
                 Text(name)
                     .font(.headline)
                     .lineLimit(1)
-                Text(app == nil ? "Removed from this iPhone" : "Version \(version) · saved to My Apps")
-                    .font(.caption)
+                Text(app == nil ? "Removed from this iPhone" : "Version \(version) · Saved")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Spacer(minLength: 8)
             Button("Open") {
                 if let app { router.running = app }
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.capsule)
+            .buttonStyle(PillButtonStyle(prominent: true))
             .disabled(app == nil)
+            .opacity(app == nil ? 0.4 : 1)
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(14)
+        .card()
     }
 }
 
@@ -313,20 +378,24 @@ struct ConversationListView: View {
                                 chat.open(conversation.id)
                                 dismiss()
                             } label: {
-                                HStack(spacing: 12) {
+                                HStack(spacing: 14) {
                                     let app = library.app(id: conversation.appID)
-                                    AppIconView(icon: app?.icon ?? "bubble.left.fill", tint: app?.tint ?? "indigo", size: 36)
+                                    AppIconView(icon: app?.icon ?? "bubble.left.fill", tint: app?.tint ?? "indigo", size: 40)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(app?.name ?? conversation.title)
                                             .font(.body.weight(.medium))
                                             .foregroundStyle(.primary)
                                             .lineLimit(1)
                                         Text(conversation.updatedAt, format: .relative(presentation: .named))
-                                            .font(.caption)
+                                            .font(.subheadline)
                                             .foregroundStyle(.secondary)
                                     }
                                 }
+                                .padding(.vertical, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                         }
                         .onDelete { offsets in
                             offsets.map { conversations.conversations[$0].id }.forEach(chat.delete)

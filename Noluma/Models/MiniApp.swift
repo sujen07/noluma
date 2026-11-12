@@ -42,7 +42,7 @@ enum AppTint {
         case "pink": .pink
         case "red": .red
         case "orange": .orange
-        case "yellow": .yellow
+        case "yellow": Color(red: 0.98, green: 0.67, blue: 0.04)
         case "green": .green
         case "mint": .mint
         case "teal": .teal

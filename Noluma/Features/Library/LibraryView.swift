@@ -5,7 +5,7 @@ struct LibraryView: View {
     @Environment(AppRouter.self) private var router
 
     @State private var details: MiniApp?
-    private let columns = [GridItem(.adaptive(minimum: 78), spacing: 18)]
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 4)
 
     var body: some View {
         NavigationStack {
@@ -22,13 +22,13 @@ struct LibraryView: View {
                     }
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: columns, spacing: 22) {
+                        LazyVGrid(columns: columns, spacing: 24) {
                             ForEach(library.apps) { app in
                                 Button {
                                     router.running = app
                                 } label: {
-                                    VStack(spacing: 6) {
-                                        AppIconView(icon: app.icon, tint: app.tint, size: 64)
+                                    VStack(spacing: 8) {
+                                        AppIconView(icon: app.icon, tint: app.tint, size: 66)
                                             .overlay(alignment: .topTrailing) {
                                                 if app.isPublished {
                                                     Image(systemName: "globe")
@@ -40,7 +40,7 @@ struct LibraryView: View {
                                                 }
                                             }
                                         Text(app.name)
-                                            .font(.caption)
+                                            .font(.caption.weight(.medium))
                                             .foregroundStyle(.primary)
                                             .lineLimit(2)
                                             .multilineTextAlignment(.center)
@@ -54,12 +54,14 @@ struct LibraryView: View {
                                 }
                             }
                         }
-                        .padding(20)
-                        Text("Press and hold an app for details and sharing.")
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        Label("Touch and hold an app for details and sharing", systemImage: "hand.tap")
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .padding(.bottom, 20)
+                            .foregroundStyle(.tertiary)
+                            .padding(.vertical, 28)
                     }
+                    .background(Color(.systemGroupedBackground))
                 }
             }
             .navigationTitle("My Apps")
@@ -90,7 +92,7 @@ struct AppDetailView: View {
                 Form {
                     Section {
                         HStack(spacing: 14) {
-                            AppIconView(icon: app.icon, tint: app.tint, size: 64)
+                            AppIconView(icon: app.icon, tint: app.tint, size: 66)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(app.name).font(.title3.weight(.semibold))
                                 Text(app.summary).font(.subheadline).foregroundStyle(.secondary)

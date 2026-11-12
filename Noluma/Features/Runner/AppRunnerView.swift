@@ -43,15 +43,17 @@ struct AppRunnerView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            AppIconView(icon: app.icon, tint: app.tint, size: 28)
+            AppIconView(icon: app.icon, tint: app.tint, size: 30)
             VStack(alignment: .leading, spacing: 1) {
                 Text(app.name)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
-                Label("Offline · data stays on this iPhone", systemImage: "lock.fill")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .labelStyle(.titleAndIcon)
+                HStack(spacing: 4) {
+                    Image(systemName: "lock.fill")
+                    Text("Offline · data stays on this iPhone")
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             }
             Spacer()
             Button {
@@ -85,24 +87,5 @@ struct AppRunnerView: View {
         } catch {
             failure = error.localizedDescription
         }
-    }
-}
-
-struct AppIconView: View {
-    let icon: String
-    let tint: String
-    var size: CGFloat = 60
-
-    var body: some View {
-        let color = AppTint.color(tint)
-        RoundedRectangle(cornerRadius: size * 0.23, style: .continuous)
-            .fill(LinearGradient(colors: [color.opacity(0.75), color], startPoint: .top, endPoint: .bottom))
-            .frame(width: size, height: size)
-            .overlay {
-                Image(systemName: AppSymbol.normalized(icon))
-                    .font(.system(size: size * 0.46, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .accessibilityHidden(true)
     }
 }
